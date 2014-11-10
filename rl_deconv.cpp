@@ -19,10 +19,20 @@ using namespace std;
 //         latent_est    = latent_est * error_est
 //     return latent_est
 
+static int image_type;
+
 Mat RL_deconvolution(Mat observed, Mat psf, int iterations) {
 
+	Scalar grey;
+
 	// Uniform grey starting estimation
-	Mat latent_est = Mat(observed.size(), CV_64FC1, 0.5);
+	switch (image_type) {
+		case CV_64FC1:
+			grey = Scalar(0.5);
+		case CV_64FC3:
+			grey = Scalar(0.5, 0.5, 0.5);
+	}
+	Mat latent_est = Mat(observed.size(), image_type, grey);
 
 	// Flip the point spread function (NOT the inverse)
 	Mat psf_hat = Mat(psf.size(), CV_64FC1);
@@ -70,9 +80,21 @@ int main( int argc, const char** argv )
 	Mat original_image;
 	original_image = imread(argv[1], CV_LOAD_IMAGE_UNCHANGED);
 
+	int num_channels = original_image.channels();
+	switch (num_channels) {
+		case 1:
+			image_type = CV_64FC1;
+			break;
+		case 3:
+			image_type = CV_64FC3;
+			break;
+		default:
+			return -2;
+	}
+
 	// This is a hack, assumes too much
 	int divisor;
-	switch (original_image.elemSize()) {
+	switch (original_image.elemSize() / num_channels) {
 		case 1:
 			divisor = 255;
 			break;
@@ -80,13 +102,13 @@ int main( int argc, const char** argv )
 			divisor = 65535;
 			break;
 		default:
-			return -2;
+			return -3;
 	}
 
 	// From here on, use 64-bit floats
 	// Convert original_image to float
 	Mat float_image;
-	original_image.convertTo(float_image, CV_64FC1);
+	original_image.convertTo(float_image, image_type);
 	float_image *= 1.0/divisor;
 	namedWindow("Float", CV_WINDOW_AUTOSIZE);
 	imshow("Float", float_image);
