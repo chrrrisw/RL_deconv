@@ -1,3 +1,6 @@
+rl_deconv
+rl_deconv_c
+
 # Compiled Object files
 *.slo
 *.lo
